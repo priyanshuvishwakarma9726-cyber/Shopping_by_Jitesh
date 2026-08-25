@@ -84,7 +84,7 @@ const CATEGORIES = [
   },
 ];
 
-// Unsplash curated product images per category
+// Unsplash curated product images per category (100% verified HTTP 200 URLs)
 const IMAGES_ELECTRONICS = [
   'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=800&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?q=80&w=800&auto=format&fit=crop',
@@ -100,11 +100,9 @@ const IMAGES_ELECTRONICS = [
   'https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=800&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1572536147248-ac59a8abfa4b?q=80&w=800&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1583394838336-acd977736f90?q=80&w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1609081219094-979a0446b738?q=80&w=800&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?q=80&w=800&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1616440347437-b1c73416efc2?q=80&w=800&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1563770660941-20978e870e26?q=80&w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1629429408209-1ab91295b30a?q=80&w=800&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1598327105666-5b89351aff97?q=80&w=800&auto=format&fit=crop',
 ];
 
@@ -132,7 +130,6 @@ const IMAGES_HOME = [
   'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?q=80&w=800&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1600121848594-d8644e57abab?q=80&w=800&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?q=80&w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1540518614846-7ede433c457b?q=80&w=800&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1513694203232-719a280e022f?q=80&w=800&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?q=80&w=800&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?q=80&w=800&auto=format&fit=crop',
@@ -157,7 +154,6 @@ const IMAGES_WATCHES = [
 const IMAGES_WELLNESS = [
   'https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=800&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1608248597359-07f9c2d1b54a?q=80&w=800&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?q=80&w=800&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1526947425960-945c6e72858f?q=80&w=800&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1617897903246-719242758050?q=80&w=800&auto=format&fit=crop',

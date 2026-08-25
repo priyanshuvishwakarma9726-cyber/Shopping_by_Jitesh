@@ -1,5 +1,4 @@
 import React from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getProductBySlug, getRelatedProducts } from '@/services/product-service';
@@ -7,6 +6,7 @@ import { Star, ChevronRight, PackageCheck, Layers, RefreshCw, Star as StarFill }
 import { Badge } from '@/components/ui/Badge';
 import { ProductDetailActions } from './product-detail-actions';
 import { ProductGrid } from '@/components/features/ProductGrid';
+import { SafeImage } from '@/components/ui/SafeImage';
 
 interface ProductDetailPageProps {
   params: Promise<{
@@ -49,8 +49,9 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
         {/* Gallery Column */}
         <div className="space-y-4">
           <div className="relative aspect-square w-full bg-white rounded-3xl overflow-hidden border border-stone-200 shadow-xs">
-            <Image
+            <SafeImage
               src={primaryImage}
+              categoryKey={product.categoryId || product.categorySlug}
               alt={product.title}
               fill
               priority
@@ -70,7 +71,13 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                   key={img.id}
                   className="relative w-20 h-20 rounded-2xl overflow-hidden bg-white border border-stone-200 flex-shrink-0 cursor-pointer hover:border-amber-500 transition-colors"
                 >
-                  <Image src={img.imageUrl} alt={img.altText || ''} fill className="object-cover" />
+                  <SafeImage
+                    src={img.imageUrl}
+                    categoryKey={product.categoryId || product.categorySlug}
+                    alt={img.altText || ''}
+                    fill
+                    className="object-cover"
+                  />
                 </div>
               ))}
             </div>

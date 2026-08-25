@@ -1,6 +1,5 @@
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { ArrowRight, Sparkles, PackageCheck, Layers, RefreshCw, HelpCircle, Flame, Star, Tag } from 'lucide-react';
 import {
   getHomepageProductSections,
@@ -8,6 +7,7 @@ import {
 } from '@/services/product-service';
 import { ProductGrid } from '@/components/features/ProductGrid';
 import { Button } from '@/components/ui/Button';
+import { SafeImage } from '@/components/ui/SafeImage';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,8 +63,9 @@ export default async function HomePage() {
           </div>
 
           <Link href={showcaseHref} className="group block relative aspect-4/3 rounded-3xl overflow-hidden shadow-2xl border border-slate-800 transition-transform duration-500 hover:scale-[1.01]">
-            <Image
+            <SafeImage
               src={showcaseImage}
+              categoryKey={heroProduct?.categoryId || heroProduct?.categorySlug}
               alt={showcaseTitle}
               fill
               priority
@@ -121,8 +122,9 @@ export default async function HomePage() {
               href={`/category/${cat.slug}`}
               className="group relative rounded-2xl overflow-hidden aspect-16/10 bg-slate-900 border border-stone-200 shadow-xs hover:shadow-xl transition-all"
             >
-              <Image
+              <SafeImage
                 src={cat.imageUrl || ''}
+                categoryKey={cat.id || cat.slug}
                 alt={cat.name}
                 fill
                 className="object-cover group-hover:scale-105 transition-transform duration-500 opacity-85 group-hover:opacity-75"

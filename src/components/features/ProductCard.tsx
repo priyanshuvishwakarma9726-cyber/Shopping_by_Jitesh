@@ -2,10 +2,10 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Heart, Star, ShoppingBag, Eye } from 'lucide-react';
 import { Product } from '@/types';
 import { Badge } from '@/components/ui/Badge';
+import { SafeImage } from '@/components/ui/SafeImage';
 import { useCart } from '@/context/cart-context';
 import { useWishlist } from '@/context/wishlist-context';
 
@@ -18,7 +18,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { isInWishlist, toggleWishlist } = useWishlist();
   const isSaved = isInWishlist(product.id);
 
-  const primaryImage = product.images[0]?.imageUrl || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e';
+  const primaryImage = product.images?.[0]?.imageUrl || '';
   const hasDiscount = product.salePrice && product.salePrice < product.basePrice;
   const discountPercent = hasDiscount
     ? Math.round(((product.basePrice - product.salePrice!) / product.basePrice) * 100)
@@ -28,8 +28,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     <div className="group relative bg-white rounded-2xl border border-stone-200/80 overflow-hidden flex flex-col transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-stone-300">
       {/* Image Container */}
       <div className="relative w-full aspect-square bg-stone-100 overflow-hidden">
-        <Image
+        <SafeImage
           src={primaryImage}
+          categoryKey={product.categoryId || product.categorySlug}
           alt={product.title}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

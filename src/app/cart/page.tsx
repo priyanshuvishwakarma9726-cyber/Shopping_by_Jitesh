@@ -2,10 +2,10 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { ShoppingBag, Trash2, Plus, Minus, ArrowRight } from 'lucide-react';
 import { useCart } from '@/context/cart-context';
 import { Button } from '@/components/ui/Button';
+import { SafeImage } from '@/components/ui/SafeImage';
 
 export default function CartPage() {
   const { cart, updateQuantity, removeFromCart } = useCart();
@@ -38,8 +38,9 @@ export default function CartPage() {
             {cart.items.map((item) => (
               <div key={item.id} className="py-6 flex flex-col sm:flex-row gap-6 items-start sm:items-center">
                 <div className="relative w-24 h-24 rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 flex-shrink-0">
-                  <Image
-                    src={item.product.images[0]?.imageUrl || ''}
+                  <SafeImage
+                    src={item.product.images?.[0]?.imageUrl || ''}
+                    categoryKey={item.product.categoryId || item.product.categorySlug}
                     alt={item.product.title}
                     fill
                     className="object-cover"

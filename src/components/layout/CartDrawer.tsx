@@ -2,10 +2,10 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { X, Trash2, Plus, Minus, ArrowRight, ShoppingBag } from 'lucide-react';
 import { useCart } from '@/context/cart-context';
 import { Button } from '@/components/ui/Button';
+import { SafeImage } from '@/components/ui/SafeImage';
 
 export const CartDrawer: React.FC = () => {
   const { cart, isDrawerOpen, closeCartDrawer, updateQuantity, removeFromCart } = useCart();
@@ -82,8 +82,9 @@ export const CartDrawer: React.FC = () => {
                 <div key={item.id} className="py-4 flex gap-4">
                   {/* Thumbnail */}
                   <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-stone-100 flex-shrink-0 border border-stone-200">
-                    <Image
-                      src={item.product.images[0]?.imageUrl || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e'}
+                    <SafeImage
+                      src={item.product.images?.[0]?.imageUrl || ''}
+                      categoryKey={item.product.categoryId || item.product.categorySlug}
                       alt={item.product.title}
                       fill
                       className="object-cover"
