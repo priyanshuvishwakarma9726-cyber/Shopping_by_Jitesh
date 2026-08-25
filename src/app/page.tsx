@@ -3,22 +3,18 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, Sparkles, PackageCheck, Layers, RefreshCw, HelpCircle, Flame, Star, Tag } from 'lucide-react';
 import {
-  getFeaturedProducts,
-  getTrendingProducts,
-  getBestSellingProducts,
-  getDealProducts,
+  getHomepageProductSections,
   getCategories,
 } from '@/services/product-service';
 import { ProductGrid } from '@/components/features/ProductGrid';
 import { Button } from '@/components/ui/Button';
 
+export const dynamic = 'force-dynamic';
+
 export default async function HomePage() {
-  const [featuredProducts, trendingProducts, bestSellers, dealProducts, categories] =
+  const [{ featuredProducts, trendingProducts, bestSellers, dealProducts }, categories] =
     await Promise.all([
-      getFeaturedProducts(),
-      getTrendingProducts(),
-      getBestSellingProducts(),
-      getDealProducts(),
+      getHomepageProductSections(8),
       getCategories(),
     ]);
 

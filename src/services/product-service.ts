@@ -288,24 +288,152 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
   return found || null;
 }
 
+export interface HomepageProductSections {
+  featuredProducts: Product[];
+  trendingProducts: Product[];
+  bestSellers: Product[];
+  dealProducts: Product[];
+}
+
+export async function getHomepageProductSections(
+  limitPerSection: number = 8
+): Promise<HomepageProductSections> {
+  try {
+    const dataSql = `
+      SELECT p.*, c.name as category_name, c.slug as category_slug, img.image_url as primary_image
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN product_images img ON p.id = img.product_id AND img.is_primary = TRUE
+      WHERE p.is_active = TRUE
+      ORDER BY RAND()
+    `;
+
+    const rows = await query<Record<string, unknown>>(dataSql);
+
+    if (rows && rows.length > 0) {
+      const allProducts = mapDbProducts(rows);
+      const usedIds = new Set<string>();
+
+      // 1. Featured Products Section (Prefers is_featured = TRUE)
+      const featuredPool = allProducts.filter((p) => p.isFeatured);
+      const featuredProducts: Product[] = [];
+      for (const p of featuredPool) {
+        if (featuredProducts.length >= limitPerSection) break;
+        featuredProducts.push(p);
+        usedIds.add(p.id);
+      }
+      for (const p of allProducts) {
+        if (featuredProducts.length >= limitPerSection) break;
+        if (!usedIds.has(p.id)) {
+          featuredProducts.push(p);
+          usedIds.add(p.id);
+        }
+      }
+
+      // 2. Trending Products Section (Prefers highest averageRating)
+      const trendingPool = [...allProducts]
+        .filter((p) => !usedIds.has(p.id))
+        .sort((a, b) => b.averageRating - a.averageRating);
+      const trendingProducts: Product[] = [];
+      for (const p of trendingPool) {
+        if (trendingProducts.length >= limitPerSection) break;
+        trendingProducts.push(p);
+        usedIds.add(p.id);
+      }
+      for (const p of allProducts) {
+        if (trendingProducts.length >= limitPerSection) break;
+        if (!usedIds.has(p.id)) {
+          trendingProducts.push(p);
+          usedIds.add(p.id);
+        }
+      }
+
+      // 3. Best-Selling Picks Section (Prefers is_best_seller = TRUE)
+      const bestSellerPool = allProducts.filter((p) => p.isBestSeller && !usedIds.has(p.id));
+      const bestSellers: Product[] = [];
+      for (const p of bestSellerPool) {
+        if (bestSellers.length >= limitPerSection) break;
+        bestSellers.push(p);
+        usedIds.add(p.id);
+      }
+      for (const p of allProducts) {
+        if (bestSellers.length >= limitPerSection) break;
+        if (!usedIds.has(p.id)) {
+          bestSellers.push(p);
+          usedIds.add(p.id);
+        }
+      }
+
+      // 4. Today's Highlights / Deals Section (Prefers salePrice < basePrice)
+      const dealPool = allProducts.filter(
+        (p) => p.salePrice && p.salePrice < p.basePrice && !usedIds.has(p.id)
+      );
+      const dealProducts: Product[] = [];
+      for (const p of dealPool) {
+        if (dealProducts.length >= limitPerSection) break;
+        dealProducts.push(p);
+        usedIds.add(p.id);
+      }
+      for (const p of allProducts) {
+        if (dealProducts.length >= limitPerSection) break;
+        if (!usedIds.has(p.id)) {
+          dealProducts.push(p);
+          usedIds.add(p.id);
+        }
+      }
+
+      return {
+        featuredProducts,
+        trendingProducts,
+        bestSellers,
+        dealProducts,
+      };
+    }
+  } catch (err) {
+    console.warn('[Product Service Warning] Failed to fetch homepage product sections from DB:', err);
+  }
+
+  // Fallback Mock Sampling
+  const usedIds = new Set<string>();
+  const shuffledMock = [...MOCK_PRODUCTS].sort(() => 0.5 - Math.random());
+
+  const featuredProducts = shuffledMock.slice(0, limitPerSection);
+  featuredProducts.forEach((p) => usedIds.add(p.id));
+
+  const trendingProducts = shuffledMock.filter((p) => !usedIds.has(p.id)).slice(0, limitPerSection);
+  trendingProducts.forEach((p) => usedIds.add(p.id));
+
+  const bestSellers = shuffledMock.filter((p) => !usedIds.has(p.id)).slice(0, limitPerSection);
+  bestSellers.forEach((p) => usedIds.add(p.id));
+
+  const dealProducts = shuffledMock.filter((p) => !usedIds.has(p.id)).slice(0, limitPerSection);
+
+  return {
+    featuredProducts,
+    trendingProducts,
+    bestSellers,
+    dealProducts,
+  };
+}
+
 export async function getFeaturedProducts(): Promise<Product[]> {
-  const { products } = await getProducts({ sortBy: 'featured', pageSize: 8 });
-  return products.filter((p) => p.isFeatured).slice(0, 8);
+  const { featuredProducts } = await getHomepageProductSections(8);
+  return featuredProducts;
 }
 
 export async function getTrendingProducts(): Promise<Product[]> {
-  const { products } = await getProducts({ sortBy: 'rating', pageSize: 8 });
-  return products.slice(0, 8);
+  const { trendingProducts } = await getHomepageProductSections(8);
+  return trendingProducts;
 }
 
 export async function getBestSellingProducts(): Promise<Product[]> {
-  const { products } = await getProducts({ pageSize: 8 });
-  return products.filter((p) => p.isBestSeller).slice(0, 8);
+  const { bestSellers } = await getHomepageProductSections(8);
+  return bestSellers;
 }
 
 export async function getDealProducts(): Promise<Product[]> {
-  const { products } = await getProducts({ pageSize: 8 });
-  return products.filter((p) => p.salePrice && p.salePrice < p.basePrice).slice(0, 8);
+  const { dealProducts } = await getHomepageProductSections(8);
+  return dealProducts;
 }
 
 export async function getRelatedProducts(currentSlug: string, categorySlug?: string): Promise<Product[]> {
