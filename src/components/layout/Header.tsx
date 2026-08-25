@@ -2,63 +2,20 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { Search, ShoppingBag, Heart, User as UserIcon, Menu, X, PackageCheck, LogOut, Shield } from 'lucide-react';
+import { ShoppingBag, Heart, User as UserIcon, Menu, X, PackageCheck, LogOut, Shield } from 'lucide-react';
 import { useCart } from '@/context/cart-context';
 import { useWishlist } from '@/context/wishlist-context';
 import { Badge } from '@/components/ui/Badge';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { User } from '@supabase/supabase-js';
 import { verifyAdminRole } from '@/services/admin-service';
-
-function SearchInput() {
-  const searchParams = useSearchParams();
-  const initialQuery = searchParams.get('q') || '';
-  const [searchQuery, setSearchQuery] = useState(initialQuery);
-  const router = useRouter();
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-    }
-  };
-
-  const handleClearSearch = () => {
-    setSearchQuery('');
-  };
-
-  return (
-    <form onSubmit={handleSearchSubmit} className="hidden md:flex flex-1 max-w-md mx-4 relative">
-      <div className="relative w-full flex items-center">
-        <Search className="absolute left-3.5 w-4 h-4 text-stone-400 pointer-events-none" />
-        <input
-          type="text"
-          placeholder="Search products across all categories..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full bg-stone-100 hover:bg-stone-50 focus:bg-white border border-stone-200 focus:border-amber-500 rounded-xl pl-10 pr-9 py-2 text-sm text-slate-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition-all"
-        />
-        {searchQuery && (
-          <button
-            type="button"
-            onClick={handleClearSearch}
-            className="absolute right-3 p-1 text-stone-400 hover:text-slate-900 transition-colors rounded-full"
-            aria-label="Clear search text"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        )}
-      </div>
-    </form>
-  );
-}
+import { LiveSearchBar } from '@/components/features/LiveSearchBar';
 
 export const Header: React.FC = () => {
   const { cart, openCartDrawer } = useCart();
   const { wishlistCount } = useWishlist();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [mobileSearchQuery, setMobileSearchQuery] = useState('');
   const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
   const supabase = createClient();
@@ -99,14 +56,6 @@ export const Header: React.FC = () => {
     router.refresh();
   };
 
-  const handleMobileSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (mobileSearchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(mobileSearchQuery.trim())}`);
-      setIsMobileMenuOpen(false);
-    }
-  };
-
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Customer';
 
   return (
@@ -142,9 +91,9 @@ export const Header: React.FC = () => {
           </span>
         </Link>
 
-        {/* Desktop Search Experience */}
+        {/* Desktop Live Search Experience */}
         <Suspense fallback={<div className="hidden md:flex flex-1 max-w-md mx-4" />}>
-          <SearchInput />
+          <LiveSearchBar className="hidden md:flex max-w-md mx-4" />
         </Suspense>
 
         {/* Action Controls */}
@@ -235,25 +184,9 @@ export const Header: React.FC = () => {
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div className="md:hidden bg-white border-b border-stone-200 p-4 space-y-4">
-          <form onSubmit={handleMobileSearchSubmit} className="relative">
-            <input
-              type="text"
-              placeholder="Search products..."
-              value={mobileSearchQuery}
-              onChange={(e) => setMobileSearchQuery(e.target.value)}
-              className="w-full bg-stone-100 border border-stone-200 rounded-xl pl-9 pr-8 py-2 text-sm text-slate-900"
-            />
-            <Search className="absolute left-3 top-2.5 w-4 h-4 text-stone-400" />
-            {mobileSearchQuery && (
-              <button
-                type="button"
-                onClick={() => setMobileSearchQuery('')}
-                className="absolute right-3 top-2.5 text-stone-400"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </form>
+          <Suspense fallback={<div className="w-full h-10 bg-stone-100 rounded-xl" />}>
+            <LiveSearchBar isMobile onNavigate={() => setIsMobileMenuOpen(false)} />
+          </Suspense>
 
           <nav className="flex flex-col gap-2 text-sm font-semibold text-stone-700">
             <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-amber-600">Home</Link>

@@ -285,8 +285,175 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
   } catch {
     // Fallback
   }
-  const found = MOCK_PRODUCTS.find((p) => p.slug === slug);
-  return found || null;
+  return null;
+}
+
+export interface SearchSuggestionProduct {
+  id: string;
+  title: string;
+  slug: string;
+  brand: string;
+  basePrice: number;
+  salePrice: number | null;
+  imageUrl: string;
+  categoryId?: string;
+  categoryName?: string;
+  categorySlug?: string;
+}
+
+export interface SearchSuggestionCategory {
+  id: string;
+  name: string;
+  slug: string;
+  icon?: string;
+  productCount?: number;
+}
+
+export interface SearchSuggestionsResult {
+  products: SearchSuggestionProduct[];
+  categories: SearchSuggestionCategory[];
+  querySuggestions: string[];
+  correctedQuery?: string;
+}
+
+const COMMON_TYPOS: Record<string, string> = {
+  'iphne': 'iPhone',
+  'iphon': 'iPhone',
+  'iphn': 'iPhone',
+  'headphnes': 'headphones',
+  'headfone': 'headphones',
+  'headfones': 'headphones',
+  'shose': 'shoes',
+  'shoos': 'shoes',
+  'sumsung': 'Samsung',
+  'samsng': 'Samsung',
+  'watche': 'watch',
+  'curtain': 'curtains',
+  'earpod': 'earbuds',
+  'earpods': 'earbuds',
+  'airpod': 'earbuds',
+  'airpods': 'earbuds',
+};
+
+export async function getSearchSuggestions(rawQuery: string): Promise<SearchSuggestionsResult> {
+  const cleanQ = (rawQuery || '').trim();
+  if (cleanQ.length < 2) {
+    return {
+      products: [],
+      categories: [],
+      querySuggestions: [],
+    };
+  }
+
+  const lowerQ = cleanQ.toLowerCase();
+  const correctedQuery = COMMON_TYPOS[lowerQ];
+  const effectiveQuery = (correctedQuery || cleanQ).toLowerCase();
+  const searchPattern = `%${effectiveQuery}%`;
+  const prefixPattern = `${effectiveQuery}%`;
+
+  try {
+    // 1. Fetch matching categories (1-2 categories)
+    const categorySql = `
+      SELECT id, name, slug, icon
+      FROM categories
+      WHERE LOWER(name) LIKE ? OR LOWER(slug) LIKE ?
+      ORDER BY (LOWER(name) LIKE ?) DESC
+      LIMIT 2
+    `;
+    const catRows = await query<Record<string, unknown>>(categorySql, [
+      searchPattern,
+      searchPattern,
+      prefixPattern,
+    ]);
+
+    const categories: SearchSuggestionCategory[] = (catRows || []).map((c) => ({
+      id: String(c.id),
+      name: String(c.name),
+      slug: String(c.slug),
+      icon: c.icon ? String(c.icon) : undefined,
+    }));
+
+    // 2. Fetch matching products (5-6 products with priority ranking)
+    const productSql = `
+      SELECT 
+        p.id, p.title, p.slug, p.brand, p.base_price, p.sale_price, p.category_id,
+        c.name as category_name, c.slug as category_slug,
+        img.image_url as primary_image
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN product_images img ON p.id = img.product_id AND img.is_primary = TRUE
+      WHERE p.is_active = TRUE AND (
+        LOWER(p.title) LIKE ? OR LOWER(p.brand) LIKE ? OR LOWER(p.description) LIKE ? OR LOWER(c.name) LIKE ?
+      )
+      ORDER BY 
+        (LOWER(p.title) LIKE ?) DESC,
+        (LOWER(p.brand) LIKE ?) DESC,
+        p.is_featured DESC,
+        p.average_rating DESC
+      LIMIT 6
+    `;
+
+    const prodRows = await query<Record<string, unknown>>(productSql, [
+      searchPattern,
+      searchPattern,
+      searchPattern,
+      searchPattern,
+      prefixPattern,
+      prefixPattern,
+    ]);
+
+    const products: SearchSuggestionProduct[] = (prodRows || []).map((p) => ({
+      id: String(p.id),
+      title: String(p.title),
+      slug: String(p.slug),
+      brand: String(p.brand || 'Shopping by Jitesh'),
+      basePrice: Number(p.base_price),
+      salePrice: p.sale_price ? Number(p.sale_price) : null,
+      imageUrl: p.primary_image ? String(p.primary_image) : 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=800&auto=format&fit=crop',
+      categoryId: String(p.category_id),
+      categoryName: p.category_name ? String(p.category_name) : undefined,
+      categorySlug: p.category_slug ? String(p.category_slug) : undefined,
+    }));
+
+    // 3. Formulate query suggestions (2-3 distinct search terms)
+    const querySuggestionsSet = new Set<string>();
+
+    if (correctedQuery) {
+      querySuggestionsSet.add(correctedQuery);
+    }
+
+    for (const p of products) {
+      if (querySuggestionsSet.size >= 3) break;
+      const titleWords = p.title.split(' ');
+      if (titleWords.length >= 2) {
+        const shortPhrase = titleWords.slice(0, 3).join(' ');
+        if (shortPhrase.toLowerCase() !== effectiveQuery.toLowerCase()) {
+          querySuggestionsSet.add(shortPhrase);
+        }
+      }
+      if (p.brand && p.brand.toLowerCase().includes(lowerQ) && p.brand.toLowerCase() !== lowerQ) {
+        querySuggestionsSet.add(p.brand);
+      }
+    }
+
+    if (querySuggestionsSet.size < 2 && categories.length > 0) {
+      querySuggestionsSet.add(`${effectiveQuery} in ${categories[0].name}`);
+    }
+
+    return {
+      products,
+      categories,
+      querySuggestions: Array.from(querySuggestionsSet).slice(0, 3),
+      correctedQuery: correctedQuery ? correctedQuery : undefined,
+    };
+  } catch (err) {
+    console.warn('[Product Service Warning] Failed to fetch search suggestions:', err);
+    return {
+      products: [],
+      categories: [],
+      querySuggestions: [],
+    };
+  }
 }
 
 export interface HomepageProductSections {
