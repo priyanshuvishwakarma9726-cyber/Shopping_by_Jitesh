@@ -71,8 +71,9 @@ export async function getProducts(filters?: ProductFilterState): Promise<{
       queryParams.push(filters.categorySlug);
     }
 
-    if (filters?.searchQuery) {
-      const searchPattern = `%${filters.searchQuery.trim()}%`;
+    const rawSearch = filters?.searchQuery || filters?.search;
+    if (rawSearch && rawSearch.trim() !== '') {
+      const searchPattern = `%${rawSearch.trim()}%`;
       whereConditions.push('(p.title LIKE ? OR p.description LIKE ? OR p.brand LIKE ? OR c.name LIKE ?)');
       queryParams.push(searchPattern, searchPattern, searchPattern, searchPattern);
     }
@@ -317,11 +318,31 @@ export async function getHomepageHeroProduct(): Promise<Product | null> {
   return MOCK_PRODUCTS[0] || null;
 }
 
+function interleaveByCategory(products: Product[]): Product[] {
+  const byCategory = new Map<string, Product[]>();
+  for (const p of products) {
+    const cat = p.categoryId || p.categorySlug || 'unknown';
+    if (!byCategory.has(cat)) byCategory.set(cat, []);
+    byCategory.get(cat)!.push(p);
+  }
+  const result: Product[] = [];
+  const catArrays = Array.from(byCategory.values());
+  const maxLen = Math.max(...catArrays.map((a) => a.length), 0);
+  for (let i = 0; i < maxLen; i++) {
+    for (const arr of catArrays) {
+      if (i < arr.length) {
+        result.push(arr[i]);
+      }
+    }
+  }
+  return result;
+}
+
 export async function getHomepageProductSections(
   limitPerSection: number = 8
 ): Promise<HomepageProductSections> {
   try {
-    // Efficient random selection of 150 candidate products from 1000+ catalog
+    // Dynamic random candidate pool from 10,000+ catalog in TiDB Cloud
     const dataSql = `
       SELECT p.*, c.name as category_name, c.slug as category_slug, img.image_url as primary_image
       FROM products p
@@ -329,7 +350,7 @@ export async function getHomepageProductSections(
       LEFT JOIN product_images img ON p.id = img.product_id AND img.is_primary = TRUE
       WHERE p.is_active = TRUE
       ORDER BY RAND()
-      LIMIT 150
+      LIMIT 200
     `;
 
     const rows = await query<Record<string, unknown>>(dataSql);
@@ -338,22 +359,26 @@ export async function getHomepageProductSections(
       const allProducts = mapDbProducts(rows);
       const usedIds = new Set<string>();
 
-      // 0. Dynamic Top Hero Product (Prefers featured/high-rating with image)
-      const heroCandidate = allProducts.find((p) => (p.isFeatured || p.averageRating >= 4.5) && p.images?.[0]?.imageUrl) || allProducts[0];
+      // 0. Dynamic Top Hero Showcase Product (Rotates across all categories)
+      const heroCandidate =
+        allProducts.find((p) => (p.isFeatured || p.averageRating >= 4.6) && p.images?.[0]?.imageUrl) ||
+        allProducts[0];
       const heroProduct = heroCandidate || null;
       if (heroProduct) {
         usedIds.add(heroProduct.id);
       }
 
-      // 1. Featured Products Section (Prefers is_featured = TRUE, excluding hero & previous)
-      const featuredPool = allProducts.filter((p) => p.isFeatured && !usedIds.has(p.id));
+      // 1. Featured Products Section (Category-diverse, prefers is_featured = TRUE)
+      const featuredPool = interleaveByCategory(
+        allProducts.filter((p) => p.isFeatured && !usedIds.has(p.id))
+      );
       const featuredProducts: Product[] = [];
       for (const p of featuredPool) {
         if (featuredProducts.length >= limitPerSection) break;
         featuredProducts.push(p);
         usedIds.add(p.id);
       }
-      for (const p of allProducts) {
+      for (const p of interleaveByCategory(allProducts)) {
         if (featuredProducts.length >= limitPerSection) break;
         if (!usedIds.has(p.id)) {
           featuredProducts.push(p);
@@ -361,17 +386,19 @@ export async function getHomepageProductSections(
         }
       }
 
-      // 2. Trending Products Section (Prefers highest averageRating, excluding previous)
-      const trendingPool = [...allProducts]
-        .filter((p) => !usedIds.has(p.id))
-        .sort((a, b) => b.averageRating - a.averageRating);
+      // 2. Trending Products Section (Category-diverse, prefers highest averageRating)
+      const trendingPool = interleaveByCategory(
+        [...allProducts]
+          .filter((p) => !usedIds.has(p.id))
+          .sort((a, b) => b.averageRating - a.averageRating)
+      );
       const trendingProducts: Product[] = [];
       for (const p of trendingPool) {
         if (trendingProducts.length >= limitPerSection) break;
         trendingProducts.push(p);
         usedIds.add(p.id);
       }
-      for (const p of allProducts) {
+      for (const p of interleaveByCategory(allProducts)) {
         if (trendingProducts.length >= limitPerSection) break;
         if (!usedIds.has(p.id)) {
           trendingProducts.push(p);
@@ -379,15 +406,17 @@ export async function getHomepageProductSections(
         }
       }
 
-      // 3. Best-Selling / Popular Picks Section (Prefers is_best_seller = TRUE, excluding previous)
-      const bestSellerPool = allProducts.filter((p) => p.isBestSeller && !usedIds.has(p.id));
+      // 3. Best-Selling / Popular Picks Section (Category-diverse, prefers is_best_seller = TRUE)
+      const bestSellerPool = interleaveByCategory(
+        allProducts.filter((p) => p.isBestSeller && !usedIds.has(p.id))
+      );
       const bestSellers: Product[] = [];
       for (const p of bestSellerPool) {
         if (bestSellers.length >= limitPerSection) break;
         bestSellers.push(p);
         usedIds.add(p.id);
       }
-      for (const p of allProducts) {
+      for (const p of interleaveByCategory(allProducts)) {
         if (bestSellers.length >= limitPerSection) break;
         if (!usedIds.has(p.id)) {
           bestSellers.push(p);
@@ -395,9 +424,11 @@ export async function getHomepageProductSections(
         }
       }
 
-      // 4. Today's Highlights / Deals Section (Prefers salePrice < basePrice, excluding previous)
-      const dealPool = allProducts.filter(
-        (p) => p.salePrice && p.salePrice < p.basePrice && !usedIds.has(p.id)
+      // 4. Today's Highlights / Deals Section (Category-diverse, prefers salePrice < basePrice)
+      const dealPool = interleaveByCategory(
+        allProducts.filter(
+          (p) => p.salePrice && p.salePrice < p.basePrice && !usedIds.has(p.id)
+        )
       );
       const dealProducts: Product[] = [];
       for (const p of dealPool) {
@@ -405,7 +436,7 @@ export async function getHomepageProductSections(
         dealProducts.push(p);
         usedIds.add(p.id);
       }
-      for (const p of allProducts) {
+      for (const p of interleaveByCategory(allProducts)) {
         if (dealProducts.length >= limitPerSection) break;
         if (!usedIds.has(p.id)) {
           dealProducts.push(p);
