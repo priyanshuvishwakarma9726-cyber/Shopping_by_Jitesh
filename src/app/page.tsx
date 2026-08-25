@@ -12,11 +12,21 @@ import { Button } from '@/components/ui/Button';
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const [{ featuredProducts, trendingProducts, bestSellers, dealProducts }, categories] =
+  const [{ heroProduct, featuredProducts, trendingProducts, bestSellers, dealProducts }, categories] =
     await Promise.all([
       getHomepageProductSections(8),
       getCategories(),
     ]);
+
+  const showcaseImage = heroProduct?.images?.[0]?.imageUrl || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=1200&auto=format&fit=crop';
+  const showcaseTitle = heroProduct?.title || 'Aura Studio ANC Headphones';
+  const showcasePrice = heroProduct ? (heroProduct.salePrice || heroProduct.basePrice) : 19999;
+  const showcaseBasePrice = heroProduct?.salePrice ? heroProduct.basePrice : null;
+  const showcaseCategory = heroProduct?.categoryName || 'Store Showcase';
+  const showcaseHref = heroProduct ? `/products/${heroProduct.slug}` : '/products';
+  const discountPercent = showcaseBasePrice && heroProduct?.salePrice
+    ? Math.round(((showcaseBasePrice - heroProduct.salePrice) / showcaseBasePrice) * 100)
+    : null;
 
   return (
     <div className="space-y-16 pb-16">
@@ -32,7 +42,7 @@ export default async function HomePage() {
               Quality Products for Every Lifestyle.
             </h1>
             <p className="text-base sm:text-lg text-stone-300 max-w-xl leading-relaxed">
-              Explore curated electronics, tailored apparel, home decor, timepieces, and wellness essentials. Simple, fast online shopping.
+              Explore over 1,000+ curated electronics, tailored apparel, home decor, timepieces, and wellness essentials. Simple, fast online shopping.
             </p>
             <div className="flex flex-wrap gap-4 pt-2">
               <Link href="/products">
@@ -52,23 +62,39 @@ export default async function HomePage() {
             </div>
           </div>
 
-          <div className="relative aspect-4/3 rounded-3xl overflow-hidden shadow-2xl border border-slate-800">
+          <Link href={showcaseHref} className="group block relative aspect-4/3 rounded-3xl overflow-hidden shadow-2xl border border-slate-800 transition-transform duration-500 hover:scale-[1.01]">
             <Image
-              src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=1200&auto=format&fit=crop"
-              alt="Shopping by Jitesh Multi-Category Marketplace"
+              src={showcaseImage}
+              alt={showcaseTitle}
               fill
               priority
-              className="object-cover"
+              className="object-cover group-hover:scale-105 transition-transform duration-700"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
-            <div className="absolute bottom-6 left-6 right-6 p-4 rounded-2xl bg-slate-900/80 backdrop-blur-md border border-slate-800 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-amber-400 font-bold uppercase tracking-wider">Store Showcase</p>
-                <p className="text-sm font-bold text-white">Aura Studio ANC Headphones</p>
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent" />
+            
+            {discountPercent && (
+              <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-amber-500 text-slate-950 text-xs font-black tracking-wider shadow-lg">
+                -{discountPercent}% OFF
               </div>
-              <span className="text-sm font-extrabold text-amber-400">₹19,999</span>
+            )}
+
+            <div className="absolute bottom-6 left-6 right-6 p-4 rounded-2xl bg-slate-900/85 backdrop-blur-md border border-slate-800 flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-xs text-amber-400 font-bold uppercase tracking-wider truncate">{showcaseCategory}</p>
+                <p className="text-sm font-bold text-white truncate group-hover:text-amber-400 transition-colors">{showcaseTitle}</p>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="text-sm sm:text-base font-extrabold text-amber-400">
+                  ₹{showcasePrice.toLocaleString('en-IN')}
+                </div>
+                {showcaseBasePrice && (
+                  <div className="text-[11px] text-stone-400 line-through">
+                    ₹{showcaseBasePrice.toLocaleString('en-IN')}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          </Link>
         </div>
       </section>
 

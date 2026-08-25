@@ -289,16 +289,39 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
 }
 
 export interface HomepageProductSections {
+  heroProduct: Product | null;
   featuredProducts: Product[];
   trendingProducts: Product[];
   bestSellers: Product[];
   dealProducts: Product[];
 }
 
+export async function getHomepageHeroProduct(): Promise<Product | null> {
+  try {
+    const dataSql = `
+      SELECT p.*, c.name as category_name, c.slug as category_slug, img.image_url as primary_image
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN product_images img ON p.id = img.product_id AND img.is_primary = TRUE
+      WHERE p.is_active = TRUE AND (p.is_featured = TRUE OR p.average_rating >= 4.5)
+      ORDER BY RAND()
+      LIMIT 1
+    `;
+    const rows = await query<Record<string, unknown>>(dataSql);
+    if (rows && rows.length > 0) {
+      return mapDbProducts(rows)[0];
+    }
+  } catch (err) {
+    console.warn('[Product Service Warning] Failed to fetch homepage hero product:', err);
+  }
+  return MOCK_PRODUCTS[0] || null;
+}
+
 export async function getHomepageProductSections(
   limitPerSection: number = 8
 ): Promise<HomepageProductSections> {
   try {
+    // Efficient random selection of 150 candidate products from 1000+ catalog
     const dataSql = `
       SELECT p.*, c.name as category_name, c.slug as category_slug, img.image_url as primary_image
       FROM products p
@@ -306,6 +329,7 @@ export async function getHomepageProductSections(
       LEFT JOIN product_images img ON p.id = img.product_id AND img.is_primary = TRUE
       WHERE p.is_active = TRUE
       ORDER BY RAND()
+      LIMIT 150
     `;
 
     const rows = await query<Record<string, unknown>>(dataSql);
@@ -314,8 +338,15 @@ export async function getHomepageProductSections(
       const allProducts = mapDbProducts(rows);
       const usedIds = new Set<string>();
 
-      // 1. Featured Products Section (Prefers is_featured = TRUE)
-      const featuredPool = allProducts.filter((p) => p.isFeatured);
+      // 0. Dynamic Top Hero Product (Prefers featured/high-rating with image)
+      const heroCandidate = allProducts.find((p) => (p.isFeatured || p.averageRating >= 4.5) && p.images?.[0]?.imageUrl) || allProducts[0];
+      const heroProduct = heroCandidate || null;
+      if (heroProduct) {
+        usedIds.add(heroProduct.id);
+      }
+
+      // 1. Featured Products Section (Prefers is_featured = TRUE, excluding hero & previous)
+      const featuredPool = allProducts.filter((p) => p.isFeatured && !usedIds.has(p.id));
       const featuredProducts: Product[] = [];
       for (const p of featuredPool) {
         if (featuredProducts.length >= limitPerSection) break;
@@ -330,7 +361,7 @@ export async function getHomepageProductSections(
         }
       }
 
-      // 2. Trending Products Section (Prefers highest averageRating)
+      // 2. Trending Products Section (Prefers highest averageRating, excluding previous)
       const trendingPool = [...allProducts]
         .filter((p) => !usedIds.has(p.id))
         .sort((a, b) => b.averageRating - a.averageRating);
@@ -348,7 +379,7 @@ export async function getHomepageProductSections(
         }
       }
 
-      // 3. Best-Selling Picks Section (Prefers is_best_seller = TRUE)
+      // 3. Best-Selling / Popular Picks Section (Prefers is_best_seller = TRUE, excluding previous)
       const bestSellerPool = allProducts.filter((p) => p.isBestSeller && !usedIds.has(p.id));
       const bestSellers: Product[] = [];
       for (const p of bestSellerPool) {
@@ -364,7 +395,7 @@ export async function getHomepageProductSections(
         }
       }
 
-      // 4. Today's Highlights / Deals Section (Prefers salePrice < basePrice)
+      // 4. Today's Highlights / Deals Section (Prefers salePrice < basePrice, excluding previous)
       const dealPool = allProducts.filter(
         (p) => p.salePrice && p.salePrice < p.basePrice && !usedIds.has(p.id)
       );
@@ -383,6 +414,7 @@ export async function getHomepageProductSections(
       }
 
       return {
+        heroProduct,
         featuredProducts,
         trendingProducts,
         bestSellers,
@@ -396,8 +428,10 @@ export async function getHomepageProductSections(
   // Fallback Mock Sampling
   const usedIds = new Set<string>();
   const shuffledMock = [...MOCK_PRODUCTS].sort(() => 0.5 - Math.random());
+  const heroProduct = shuffledMock[0] || null;
+  if (heroProduct) usedIds.add(heroProduct.id);
 
-  const featuredProducts = shuffledMock.slice(0, limitPerSection);
+  const featuredProducts = shuffledMock.filter((p) => !usedIds.has(p.id)).slice(0, limitPerSection);
   featuredProducts.forEach((p) => usedIds.add(p.id));
 
   const trendingProducts = shuffledMock.filter((p) => !usedIds.has(p.id)).slice(0, limitPerSection);
@@ -409,6 +443,7 @@ export async function getHomepageProductSections(
   const dealProducts = shuffledMock.filter((p) => !usedIds.has(p.id)).slice(0, limitPerSection);
 
   return {
+    heroProduct,
     featuredProducts,
     trendingProducts,
     bestSellers,
