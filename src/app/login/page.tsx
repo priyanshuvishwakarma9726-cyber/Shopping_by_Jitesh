@@ -3,7 +3,7 @@
 import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, EyeOff, Lock, Mail, User as UserIcon, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/context/toast-context';
@@ -263,11 +263,6 @@ function LoginFormContent() {
             {tab === 'login' ? 'Sign In to Account' : 'Register New Account'}
           </Button>
         </form>
-      </div>
-
-      <div className="flex items-center justify-center gap-2 text-xs text-stone-500 font-medium">
-        <ShieldCheck className="w-4 h-4 text-amber-600" />
-        <span>Secure authentication powered by Supabase Auth</span>
       </div>
     </div>
   );
