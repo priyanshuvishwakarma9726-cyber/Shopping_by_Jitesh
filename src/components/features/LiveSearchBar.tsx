@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Search, X, Loader2, Sparkles, Folder, ArrowRight } from 'lucide-react';
 import { SafeImage } from '@/components/ui/SafeImage';
-import { SearchSuggestionsResult } from '@/services/product-service';
+import type { SearchSuggestionsResult } from '@/types';
 
 export interface LiveSearchBarProps {
   placeholder?: string;
@@ -20,9 +20,7 @@ export const LiveSearchBar: React.FC<LiveSearchBarProps> = ({
   isMobile = false,
   onNavigate,
 }) => {
-  const searchParams = useSearchParams();
-  const initialQuery = searchParams.get('q') || searchParams.get('search') || '';
-  const [queryText, setQueryText] = useState(initialQuery);
+  const [queryText, setQueryText] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<SearchSuggestionsResult | null>(null);
@@ -31,6 +29,17 @@ export const LiveSearchBar: React.FC<LiveSearchBarProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+
+  // Synchronize with URL search query parameter on client mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const initial = params.get('q') || params.get('search') || '';
+      if (initial) {
+        setQueryText(initial);
+      }
+    }
+  }, []);
 
   // Create flat list of selectable items for keyboard navigation
   const selectableItems = React.useMemo(() => {
@@ -418,3 +427,6 @@ export const LiveSearchBar: React.FC<LiveSearchBarProps> = ({
     </div>
   );
 };
+
+export default LiveSearchBar;
+

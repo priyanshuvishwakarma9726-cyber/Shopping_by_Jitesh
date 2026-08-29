@@ -92,9 +92,9 @@ export const Header: React.FC = () => {
         </Link>
 
         {/* Desktop Live Search Experience */}
-        <Suspense fallback={<div className="hidden md:flex flex-1 max-w-md mx-4" />}>
-          <LiveSearchBar className="hidden md:flex max-w-md mx-4" />
-        </Suspense>
+        <div className="hidden md:flex flex-1 max-w-md mx-4 relative">
+          <LiveSearchBar />
+        </div>
 
         {/* Action Controls */}
         <div className="flex items-center gap-1 sm:gap-3 shrink-0">
@@ -184,9 +184,9 @@ export const Header: React.FC = () => {
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div className="md:hidden bg-white border-b border-stone-200 p-4 space-y-4">
-          <Suspense fallback={<div className="w-full h-10 bg-stone-100 rounded-xl" />}>
+          <div className="w-full relative">
             <LiveSearchBar isMobile onNavigate={() => setIsMobileMenuOpen(false)} />
-          </Suspense>
+          </div>
 
           <nav className="flex flex-col gap-2 text-sm font-semibold text-stone-700">
             <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-amber-600">Home</Link>
@@ -212,3 +212,6 @@ export const Header: React.FC = () => {
     </header>
   );
 };
+
+export default Header;
+

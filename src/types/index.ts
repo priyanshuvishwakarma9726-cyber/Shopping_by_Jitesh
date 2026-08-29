@@ -235,3 +235,32 @@ export interface ProductFilterState {
   page?: number;
   pageSize?: number;
 }
+
+export interface SearchSuggestionProduct {
+  id: string;
+  title: string;
+  slug: string;
+  basePrice: number;
+  salePrice?: number;
+  brand?: string;
+  imageUrl?: string;
+  categoryId?: string;
+  categoryName?: string;
+  categorySlug?: string;
+}
+
+export interface SearchSuggestionCategory {
+  id: string;
+  name: string;
+  slug: string;
+  icon?: string;
+  productCount?: number;
+}
+
+export interface SearchSuggestionsResult {
+  products: SearchSuggestionProduct[];
+  categories: SearchSuggestionCategory[];
+  querySuggestions: string[];
+  correctedQuery?: string;
+}
+
