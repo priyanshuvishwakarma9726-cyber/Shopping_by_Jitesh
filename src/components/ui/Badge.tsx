@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -38,3 +36,6 @@ export const Badge: React.FC<BadgeProps> = ({
     </span>
   );
 };
+
+export default Badge;
+

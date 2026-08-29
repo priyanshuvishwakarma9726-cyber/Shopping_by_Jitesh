@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -28,3 +26,6 @@ export const Skeleton: React.FC<SkeletonProps> = ({
     />
   );
 };
+
+export default Skeleton;
+
